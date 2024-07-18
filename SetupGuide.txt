@@ -1,0 +1,8 @@
+Setup guide (for Windows users)
+
+1. Download and install the free Community Version of Visual Studio. Make sure to select “Desktop development with C++” for installation. https://visualstudio.microsoft.com/de/downloads/
+2. Download and install CPLEX (free academic license). https://community.ibm.com/community/user/ai-datascience/blogs/xavier-nodet1/2020/07/09/cplex-free-for-students
+3. Locally save the folder “cg_testproject” from Seafile. Open the file “CMakeLists.txt” and adapt CPLEX_VERSION and CPLEX_ROOT_DIR according to your installation.
+4. Start Visual Studio. Use the "Open a local folder" option and navigate to your local “cg_testproject” folder.
+5. Select “TestProject.exe” as Startup Item. You should now be ready to compile and run the code. Try by hitting F5.
+
