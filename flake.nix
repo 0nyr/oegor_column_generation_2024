@@ -9,11 +9,14 @@
   outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        # Override the Nix package set to allow unfree packages
+        pkgs = import nixpkgs {
+          system = system; 
+          config.allowUnfree = true; 
+        };
 
         # Import the custom CPLEX package derivation
-        cplex = (import ./cplex) {
-          inherit pkgs;
+        cplex = (import ./cplex.nix) {
           inherit (pkgs) lib stdenv makeWrapper openjdk gtk2 xorg glibcLocales;
           releasePath = "/home/onyr/cplex2210"; # Set the path to your downloaded CPLEX installer
         };
