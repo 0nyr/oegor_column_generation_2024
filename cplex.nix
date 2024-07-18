@@ -1,8 +1,9 @@
 { lib, stdenv, makeWrapper, openjdk, gtk2, xorg, glibcLocales, releasePath ? null }:
 
-# Take from NIXPKGS: https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/applications/science/math/cplex/default.nix#L81
+# Taken from NIXPKGS: https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/applications/science/math/cplex/default.nix#L81
 # To use this package, you need to download your own cplex installer from IBM
 # and override the releasePath attribute to point to the location of the file.
+#  -> EDIT: I made a derivation for it in flake.nix
 #
 # Note: cplex creates an individual build for each license which screws
 # somewhat with the use of functions like requireFile as the hash will be
