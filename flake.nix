@@ -15,10 +15,21 @@
           config.allowUnfree = true; 
         };
 
+        # Setup CPLEX installer as a fixed-output derivation
+        cplexInstaller = pkgs.stdenv.mkDerivation {
+          name = "cplex-installer";
+          src = /home/onyr/cplex2210/cplex_studio2210.linux_x86_64.bin;
+          outputHashMode = "flat";
+          outputHashAlgo = "sha256";
+          outputHash = "07cak2594vgipk728v4xs3gwdd1wwbzphv4qnpfkyhsmxfifdy68"; # Calculate the hash of the installer: nix-hash --flat --base32 --type sha256 /home/onyr/cplex2210/cplex_studio2210.linux_x86_64.bin
+          phases = ["installPhase"];
+          installPhase = "cp $src $out";
+        };
+
         # Import the custom CPLEX package derivation
         cplex = (import ./cplex.nix) {
           inherit (pkgs) lib stdenv makeWrapper openjdk gtk2 xorg glibcLocales;
-          releasePath = "/home/onyr/cplex2210"; # Set the path to your downloaded CPLEX installer
+          releasePath = cplexInstaller; # Pass the installer derivation
         };
       in
       {
