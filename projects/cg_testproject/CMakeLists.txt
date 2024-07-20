@@ -10,7 +10,7 @@ set (IL_STD TRUE)
 # Where to find CPLEX
 #####
 set(CPLEX_VERSION 2210)
-set(CPLEX_ROOT_DIR "/home/onyr/cplex2210")
+set(CPLEX_ROOT_DIR "/home/onyr/cplex2210/CPLEX_Studio221") # default is generally "/opt/ibm/ILOG/CPLEX_Studio221"
 # Win
 # set(CPLEX_COMPILER_FOLDER_NAME x64_windows_msvc14)
 # Linux
