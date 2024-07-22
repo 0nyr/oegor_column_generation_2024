@@ -12,3 +12,6 @@ CMakePresets.json
 # CMake generated build directories
 build/
 build-*/
+
+# generated solutions
+output/
