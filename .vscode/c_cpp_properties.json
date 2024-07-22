@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/onyr/cplex2210/CPLEX_Studio221/**",
+                "/home/onyr/cplex2210/CPLEX_Studio221/cplex/include"
+            ],
+            "defines": [],
+            "compilerPath": "/nix/store/kp2j7yn0wzwq5piy494r54dafrh83s6s-gcc-wrapper-13.3.0/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
