@@ -69,7 +69,7 @@ int main(int argc, char** argv)
 
 	// model is built once at the beginning and used for the whole solution process
 	c_BP_RMP_Model rmp_model = c_BP_RMP_Model(env, inst_bp);
-	// RMP initialization
+	// RMP initialization, prior to CG process
 	rmp_model.InitializeRMP();
 	IloCplex rmp_solver(rmp_model);
 
@@ -85,10 +85,10 @@ int main(int argc, char** argv)
 	rmp_solver.setWarning(env.getNullStream());
 
 	///////////////////////////////////////////////////////////////////////////
-	// exchange information between rmp and pricing problem
+	// exchange information between rmp and pricing problem 
 	///////////////////////////////////////////////////////////////////////////
 
-	IloNumArray dual_price(env, num_items);//dual price
+	IloNumArray dual_prices(env, num_items);//dual price, array of floating point numbers
 	IloNumArray new_bin(env, num_items);//solution of pricing (MIP)
 	vector<IloNumArray> bins_to_add;//new bins to add to RMP
 
@@ -116,18 +116,50 @@ int main(int argc, char** argv)
 		rmp_objective = rmp_solver.getObjValue();
 		// get dual prices
 		for (int c = 0; c < num_items; c++)
-			dual_price[c] = rmp_solver.getDual(rmp_model.Constraint(c));
+			dual_prices[c] = rmp_solver.getDual(rmp_model.Constraint(c));
 
 		///////////////////////////////////////////////////////////////////////////
 		// pricing start
+		// pricing MIP -> get new columns ! Heart of the column generation
+		//TODO: add the variables, the constrains, the objective function, get the solution
+		// the bin packing (binary knapsack problem) problem is solved here
+		// selection of items with negative reduced cost that respects the bin capacity
 		///////////////////////////////////////////////////////////////////////////
 		timer_pp.Restart();
 		double rdc = 0.0;
+		double reduced_cost = -1.0;
 
-		// pricing MIP
+		// solve pricing MIP
+		c_BP_Pricing_MIP_Model pricing_model = c_BP_Pricing_MIP_Model(env, inst_bp, dual_prices);
+		
+		// create the solver for the pricing problem
+		IloCplex pricing_solver(pricing_model);
 
+		// set time limit and threads
+		pricing_solver.setParam(IloCplex::TiLim, i_time_limit_seconds);
+		pricing_solver.setParam(IloCplex::Param::Threads, 1);
+		pricing_solver.extract(pricing_model);
+		if (b_debug)
+			pricing_solver.exportModel(model_pricing_file.c_str());
+		
+		// solve the pricing problem
+		pricing_solver.setOut(env.getNullStream());
+		pricing_solver.setWarning(env.getNullStream());
+		pricing_solver.solve();
+
+		// get the solution (new column)
+		pricing_solver.getValues(new_bin, pricing_model.XVars());
+		
+		// add the new column to the RMP
+		if (1 - pricing_solver.getObjValue() >= 0.0) {
+			break;
+		}
+
+		bins_to_add.push_back(new_bin);
+		rmp_model.AddColumns(bins_to_add);
 
 		timer_pp.Stop();
+		// if no new columns with negative reduced cost, then stop (optimality)
 		if (!(rdc < -EPSILON))
 			break;
 		///////////////////////////////////////////////////////////////////////////
@@ -140,6 +172,7 @@ int main(int argc, char** argv)
 	// column-generation procedure end
 	///////////////////////////////////////////////////////////////////////////
 
+	// update results from last iteration
 	if (rmp_solver.getObjValue())
 		rmp_objective = rmp_solver.getObjValue();
 	if (rmp_objective > best_lb)

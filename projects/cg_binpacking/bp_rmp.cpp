@@ -10,7 +10,6 @@ c_BP_RMP_Model::c_BP_RMP_Model(const IloEnv& env, const c_BP_Instance& instance)
 :	o_env(env),
 	IloModel(env),
 	o_instance(instance),
-	ilo_objective(IloMinimize(env)),
 	ilo_constraints(env),
 	ilo_bin_columns(env)
 {
@@ -18,6 +17,7 @@ c_BP_RMP_Model::c_BP_RMP_Model(const IloEnv& env, const c_BP_Instance& instance)
 	int num_items = o_instance.NumItems();
 
 	// objective
+	ilo_objective = IloMinimize(env);
 	add(ilo_objective);
 
 	//constraints
@@ -28,6 +28,8 @@ c_BP_RMP_Model::c_BP_RMP_Model(const IloEnv& env, const c_BP_Instance& instance)
 	add(ilo_constraints);
 }
 
+/// @brief Initialize the RMP with trivial columns
+/// This is trivial. We just add a column for each item.
 void c_BP_RMP_Model::InitializeRMP()
 {
 	vector<vector<int>> bins;
