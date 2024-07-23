@@ -14,8 +14,9 @@ c_BP_Pricing_MIP_Model::c_BP_Pricing_MIP_Model(
 	IloModel(env),
 	o_instance(instance)
 {
-	// define X variables
+	// define variables
 	x = IloNumVarArray(env, o_instance.NumItems(), 0, 1, ILOINT);
+	ilo_constraints = IloRangeArray(env);
 
 	// objective function definition
 	IloExpr objective_function(env);

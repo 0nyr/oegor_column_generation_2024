@@ -151,17 +151,16 @@ int main(int argc, char** argv)
 		pricing_solver.getValues(new_bin, pricing_model.XVars());
 		
 		// add the new column to the RMP
-		if (1 - pricing_solver.getObjValue() >= 0.0) {
-			break;
-		}
-
-		bins_to_add.push_back(new_bin);
-		rmp_model.AddColumns(bins_to_add);
+		rdc = 1 - pricing_solver.getObjValue();
 
 		timer_pp.Stop();
 		// if no new columns with negative reduced cost, then stop (optimality)
 		if (!(rdc < -EPSILON))
 			break;
+		
+		bins_to_add.push_back(new_bin);
+		rmp_model.AddColumns(bins_to_add);
+		
 		///////////////////////////////////////////////////////////////////////////
 		// pricing end
 		///////////////////////////////////////////////////////////////////////////
