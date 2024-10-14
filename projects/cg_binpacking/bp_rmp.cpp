@@ -51,11 +51,16 @@ void c_BP_RMP_Model::AddColumns(const vector<vector<int>>& bins)
 		for (auto item : bins[i])
 			items_of_bin[item] = 1.0;
 		ilo_bin_columns.add(IloNumVar(ilo_objective(1.0) + ilo_constraints(items_of_bin)));
+
+		all_generated_bins.push_back(items_of_bin);
 	}
 }
 
 void c_BP_RMP_Model::AddColumns(const vector<IloNumArray>& bins)
 {
-	for (int i = 0; i < (int)bins.size(); ++i)
+	for (int i = 0; i < (int)bins.size(); ++i) {
 		ilo_bin_columns.add(IloNumVar(ilo_objective(1.0) + ilo_constraints(bins[i])));
+		
+		all_generated_bins.push_back(bins[i]);
+	}
 }

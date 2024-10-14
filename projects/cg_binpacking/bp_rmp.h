@@ -13,6 +13,8 @@ class c_BP_RMP_Model : public IloModel {
 	IloNumVarArray ilo_bin_columns;
 
 public:
+	std::vector<IloNumArray> all_generated_bins;
+
 	c_BP_RMP_Model(const IloEnv& env, const c_BP_Instance& instance);
 
 	IloRange& Constraint(int num) { return ilo_constraints[num]; }

@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 
 	// create and read instance
 	string filename = argv[1];
-	c_BP_Instance inst_bp = c_BP_Instance(filename);
+	c_BP_Instance bin_packing_instance = c_BP_Instance(filename);
 
 	// output paths
 	string output_folder = argv[2];
@@ -38,10 +38,10 @@ int main(int argc, char** argv)
 	string model_pricing_file = output_folder + "/model_pricing.lp";
 
 	// some global data
-	int num_items = inst_bp.NumItems();
+	int num_items = bin_packing_instance.NumItems();
 	double rmp_objective = BigM * BigM;
-	double best_lb = 0.0;
-	bool b_optimal = false;
+	double best_lb = 0.0; // TODO: not used 
+	bool is_optimal = false;
 	int iteration = 0;
 
 	// timers
@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 	///////////////////////////////////////////////////////////////////////////
 
 	bool b_debug = true;
-	int i_time_limit_seconds = 60;
+	int i_time_limit_seconds = 600;
 
 	///////////////////////////////////////////////////////////////////////////
 	// initialize CPLEX
@@ -68,13 +68,13 @@ int main(int argc, char** argv)
 	///////////////////////////////////////////////////////////////////////////
 
 	// model is built once at the beginning and used for the whole solution process
-	c_BP_RMP_Model rmp_model = c_BP_RMP_Model(env, inst_bp);
+	c_BP_RMP_Model rmp_model = c_BP_RMP_Model(env, bin_packing_instance);
 	// RMP initialization, prior to CG process
 	rmp_model.InitializeRMP();
 	IloCplex rmp_solver(rmp_model);
 
 	// set time limit and threads
-	rmp_solver.setParam(IloCplex::TiLim, i_time_limit_seconds);
+	rmp_solver.setParam(IloCplex::Param::TimeLimit, i_time_limit_seconds);
 	rmp_solver.setParam(IloCplex::Param::Threads, 1);
 	// export model
 	rmp_solver.extract(rmp_model);
@@ -112,11 +112,11 @@ int main(int argc, char** argv)
 		rmp_solver.solve();
 		timer_rmp.Stop();
 		if (b_debug)
-			cout << iteration << " " << rmp_solver.getObjValue() << endl;
+			cout << "[iteration: " << iteration << "] current objective: " << rmp_solver.getObjValue() << endl;
 		rmp_objective = rmp_solver.getObjValue();
 		// get dual prices
 		for (int c = 0; c < num_items; c++)
-			dual_prices[c] = rmp_solver.getDual(rmp_model.Constraint(c));
+			dual_prices[c] = rmp_solver.getDual(rmp_model.Constraint(c)); // get dual price of the constraint associated with item c
 
 		///////////////////////////////////////////////////////////////////////////
 		// pricing start
@@ -130,13 +130,15 @@ int main(int argc, char** argv)
 		double reduced_cost = -1.0;
 
 		// solve pricing MIP
-		c_BP_Pricing_MIP_Model pricing_model = c_BP_Pricing_MIP_Model(env, inst_bp, dual_prices);
-		
+		c_BP_Pricing_MIP_Model pricing_model = c_BP_Pricing_MIP_Model(
+			env, bin_packing_instance, dual_prices
+		);
+
 		// create the solver for the pricing problem
 		IloCplex pricing_solver(pricing_model);
 
 		// set time limit and threads
-		pricing_solver.setParam(IloCplex::TiLim, i_time_limit_seconds);
+		pricing_solver.setParam(IloCplex::Param::TimeLimit, i_time_limit_seconds);
 		pricing_solver.setParam(IloCplex::Param::Threads, 1);
 		pricing_solver.extract(pricing_model);
 		if (b_debug)
@@ -156,7 +158,10 @@ int main(int argc, char** argv)
 		timer_pp.Stop();
 		// if no new columns with negative reduced cost, then stop (optimality)
 		if (!(rdc < -EPSILON))
+		{	
+			is_optimal = true;
 			break;
+		}
 		
 		bins_to_add.push_back(new_bin);
 		rmp_model.AddColumns(bins_to_add);
@@ -177,12 +182,33 @@ int main(int argc, char** argv)
 	if (rmp_objective > best_lb)
 		best_lb = rmp_objective;
 
-	cout << "total solution time: " << timer_overall.TotalSeconds() << "[s]" << endl;
+	cout << "total solution time: " << timer_overall.TotalSeconds() << " s" << endl;
 	cout << "current root_objective = " << rmp_objective << endl;
 	cout << "best_lb = " << best_lb << endl;
-	if (b_optimal)
+	if (is_optimal) {
 		cout << "Solved to optimality" << endl;
-
+	
+		// Print the solution (the bins)
+		// Get selected bins from RMP solver ilo_bin_columns and print them
+		IloNumArray binValues(env);
+		rmp_solver.getValues(binValues, rmp_model.BinVars());
+		for (int i = 0; i < binValues.getSize(); i++) {
+			if (binValues[i] > 0.5) {
+				cout << "Bin " << i;
+				printf(" [%.2f]", binValues[i]);
+				cout << ": {";
+				IloNumArray& bin = rmp_model.all_generated_bins[i];
+				for (int j = 0; j < num_items; j++) {
+					if (bin[j] == 1) {
+						cout << j << " ";
+					}
+				}
+				cout << "}" << endl;
+			}
+		}
+	} else {
+		cout << "NOT solved to optimality" << endl;
+	}
 	string output_file = output_folder + "/solutions.csv";
 	ifstream test_file(output_file);
 	if (!test_file.good())
@@ -190,19 +216,20 @@ int main(int argc, char** argv)
 		ofstream myfile;
 		myfile.open(output_file);
 		myfile << "instance;";
-		myfile << "time[s];";
-		myfile << "opt?;";
+		myfile << "time_in_seconds;";
+		myfile << "is_optimal;";
 		myfile << "best_lb;";
 		myfile << "time pricing;";
 		myfile << "time rmp;";
 		myfile << "\n";
 		myfile.close();
 	}
+
 	ofstream myfile;
 	myfile.open(output_file, std::ios_base::app);
 	myfile << filename << ";";
 	myfile << timer_overall.TotalSeconds() << ";";
-	myfile << (b_optimal ? "true" : "false") << ";";
+	myfile << (is_optimal ? "true" : "false") << ";";
 	myfile << best_lb << ";";
 	myfile << timer_pp.TotalSeconds() << ";";
 	myfile << timer_rmp.TotalSeconds() << ";";
