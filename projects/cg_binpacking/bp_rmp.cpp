@@ -47,12 +47,13 @@ void c_BP_RMP_Model::AddColumns(const vector<vector<int>>& bins)
 {
 	for (int i = 0; i < (int)bins.size(); ++i)
 	{
+		auto& bin = bins[i];
 		IloNumArray items_of_bin(o_env, o_instance.NumItems());
-		for (auto item : bins[i])
+		for (auto item : bin)
 			items_of_bin[item] = 1.0;
 		ilo_bin_columns.add(IloNumVar(ilo_objective(1.0) + ilo_constraints(items_of_bin)));
 
-		all_generated_bins.push_back(items_of_bin);
+		all_generated_bins.push_back(bin);
 	}
 }
 
@@ -61,6 +62,13 @@ void c_BP_RMP_Model::AddColumns(const vector<IloNumArray>& bins)
 	for (int i = 0; i < (int)bins.size(); ++i) {
 		ilo_bin_columns.add(IloNumVar(ilo_objective(1.0) + ilo_constraints(bins[i])));
 		
-		all_generated_bins.push_back(bins[i]);
+		// convert IloNumArray to vector<int>
+		vector<int> bin;
+		for (int j = 0; j < o_instance.NumItems(); j++) {
+			if (bins[i][j] >= 1)
+				bin.push_back(j);
+		}
+		all_generated_bins.push_back(std::move(bin));
+
 	}
 }

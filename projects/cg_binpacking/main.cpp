@@ -4,6 +4,7 @@
 #include "bp_instance.h"
 #include "bp_rmp.h"
 #include "bp_pricing_mip.h"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -127,7 +128,6 @@ int main(int argc, char** argv)
 		///////////////////////////////////////////////////////////////////////////
 		timer_pp.Restart();
 		double rdc = 0.0;
-		double reduced_cost = -1.0;
 
 		// solve pricing MIP
 		c_BP_Pricing_MIP_Model pricing_model = c_BP_Pricing_MIP_Model(
@@ -165,6 +165,21 @@ int main(int argc, char** argv)
 		
 		bins_to_add.push_back(new_bin);
 		rmp_model.AddColumns(bins_to_add);
+
+		// print new column
+		if (b_debug)
+		{
+			cout << " > New column: {";
+			std::vector<uint> bin_vector = convert_column_to_bin_vector(new_bin);
+			for (int i = 0; i < bin_vector.size(); i++) {
+				cout << bin_vector[i];
+				if (i < bin_vector.size() - 1)
+					cout << ", ";
+			}
+			cout << "}";
+			cout << ", rdc: " << rdc;	
+			cout << endl;
+		}
 		
 		///////////////////////////////////////////////////////////////////////////
 		// pricing end
@@ -182,6 +197,17 @@ int main(int argc, char** argv)
 	if (rmp_objective > best_lb)
 		best_lb = rmp_objective;
 
+	cout << "All generated bins: " << rmp_model.all_generated_bins.size() << endl;
+	for (int i = 0; i < rmp_model.all_generated_bins.size(); i++) {
+		cout << "---Bin " << i << " {";
+		for (int j = 0; j < rmp_model.all_generated_bins[i].size(); j++) {
+			cout << rmp_model.all_generated_bins[i][j];
+			if (j < rmp_model.all_generated_bins[i].size() - 1)
+				cout << ", ";
+		}
+		cout << "}" << endl;
+	}
+
 	cout << "total solution time: " << timer_overall.TotalSeconds() << " s" << endl;
 	cout << "current root_objective = " << rmp_objective << endl;
 	cout << "best_lb = " << best_lb << endl;
@@ -196,14 +222,34 @@ int main(int argc, char** argv)
 			if (binValues[i] > 0.5) {
 				cout << "Bin " << i;
 				printf(" [%.2f]", binValues[i]);
-				cout << ": {";
-				IloNumArray& bin = rmp_model.all_generated_bins[i];
-				for (int j = 0; j < num_items; j++) {
-					if (bin[j] == 1) {
-						cout << j << " ";
-					}
+				cout << " {";
+				for (int j = 0; j < rmp_model.all_generated_bins[i].size(); j++) {
+					cout << rmp_model.all_generated_bins[i][j];
+					if (j < rmp_model.all_generated_bins[i].size() - 1)
+						cout << ", ";
 				}
 				cout << "}" << endl;
+			}
+		}
+
+		// assert the solution is valid
+		// all items must be in exactly one bin
+		vector<bool> item_in_bin(num_items, false);
+		for (int i = 0; i < binValues.getSize(); i++) {
+			if (binValues[i] > 0.5) {
+				for (int j = 0; j < rmp_model.all_generated_bins[i].size(); j++) {
+					if (!item_in_bin[rmp_model.all_generated_bins[i][j]]) {
+						item_in_bin[rmp_model.all_generated_bins[i][j]] = true;
+					}
+					else {
+						cout << "ERROR: item " << rmp_model.all_generated_bins[i][j] << " is in more than one bin" << endl;
+					}
+				}
+			}
+		}
+		for (int i = 0; i < num_items; i++) {
+			if (!item_in_bin[i]) {
+				cout << "ERROR: item " << i << " is not in any bin" << endl;
 			}
 		}
 	} else {

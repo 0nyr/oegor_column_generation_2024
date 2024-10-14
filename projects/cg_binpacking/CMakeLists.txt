@@ -26,6 +26,7 @@ add_executable (${CMAKE_PROJECT_NAME}
 "bp_instance.cpp" 
 "bp_rmp.cpp" 
 "bp_pricing_mip.cpp" 
+"utils.cpp"
 )
 
 include(FindCPLEX.cmake)
